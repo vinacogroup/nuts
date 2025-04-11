@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:5.8.0
+FROM mhart/alpine-node:12
 
 # Switch to /app
 WORKDIR /app
@@ -10,6 +10,9 @@ COPY . ./
 
 # Ports
 ENV PORT 80
+# Set trust proxy to trust first proxy
+ENV TRUST_PROXY true
+
 EXPOSE 80
 
 ENTRYPOINT ["npm", "start"]
