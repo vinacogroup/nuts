@@ -1,0 +1,10 @@
+name: clean-action
+description: Clean the builded image on runner
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v2
+    - name: Clean runner server
+      shell: bash
+      run: |
+        echo "y" | sudo docker system prune -a 2> /dev/null || true

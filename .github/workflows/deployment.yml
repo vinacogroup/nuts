@@ -1,0 +1,55 @@
+name: snapbox Api
+on:
+  push:
+    branches:
+      - master
+env:
+  GITLAB_REGISTRY_URL: registry.gitlab.com/vinaco/ecr/snapbox-prd/nuts-api
+
+jobs:
+  build:
+    name: Build and push docker image to registry
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/build-action
+        with:
+          GITLAB_REGISTRY_URL: ${{ env.GITLAB_REGISTRY_URL }}
+          GITLAB_USERNAME: ${{ secrets.GITLAB_USERNAME }}
+          GITLAB_PASSWORD: ${{ secrets.GITLAB_PASSWORD }}
+  push:
+    name: Deploy the image to server
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      # Deploy Docker image to server
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            sudo docker pull ${{ env.GITLAB_REGISTRY_URL }}:${{ github.sha }}
+            sudo docker rm -f nuts-api 2> /dev/null || true
+            sudo docker run -d \
+              --publish 30060:80 \
+              --env-file /mnt/nfs/snapbox/nuts/.env \
+              --name nuts-api ${{ env.GITLAB_REGISTRY_URL }}:${{ github.sha }}
+  clean:
+    name: Clean the builded image on runner
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      # Clean server backend
+      - name: Clean server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            echo "y" | sudo docker system prune -a 2> /dev/null || true
+      - uses: ./.github/clean-action

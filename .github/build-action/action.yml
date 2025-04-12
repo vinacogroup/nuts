@@ -1,0 +1,39 @@
+name: build-action
+description: Build image
+inputs:
+  GITLAB_REGISTRY_URL:
+    description: "docker registry url"
+    required: true
+  GITLAB_USERNAME:
+    description: "docker username"
+    required: true
+  GITLAB_PASSWORD:
+    description: "docker password"
+    required: true
+runs:
+  using: composite
+  steps:
+    # Checkout the repository to the runner
+    - uses: actions/checkout@v2
+    # Setup Docker buildx for building multi-platform images
+    - name: Set up Docker buildx
+      uses: docker/setup-buildx-action@v1
+
+    # Login to your private registry
+    - name: Login to Private Registry
+      uses: docker/login-action@v1
+      with:
+        registry: registry.gitlab.com
+        username: ${{ inputs.GITLAB_USERNAME }}
+        password: ${{ inputs.GITLAB_PASSWORD }}
+    # Build Docker image and tag with Git commit hash
+    - name: Build and Tag Docker Image
+      shell: bash
+      run: |
+        docker buildx build -t ${{ inputs.GITLAB_REGISTRY_URL }}:${{ github.sha }} .
+
+    # Push Docker image to private registry
+    - name: Push Docker Image
+      shell: bash
+      run: |
+        docker buildx build --push -t ${{ inputs.GITLAB_REGISTRY_URL }}:${{ github.sha }} .

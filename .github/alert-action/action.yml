@@ -1,0 +1,22 @@
+name: push-notification
+description: Alert action
+inputs:
+  LARK_APP_SECRET:
+    description: 'Lark app secret'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Send Lark Notification
+      shell: bash
+      if: always()
+      run: |
+        STATUS="${{ job.status }}"
+        COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+        if [ "$STATUS" == "success" ]; then
+          MESSAGE="Deploy ${COMMIT_MESSAGE} virtual-mart-api thành công 🎉"
+        else
+          MESSAGE="Deploy ${COMMIT_MESSAGE} virtual-mart-api thất bại 😞"
+        fi
+
+        LARK_APP_SECRET=${{ inputs.LARK_APP_SECRET }} MESSAGE=$MESSAGE sh .github/workflows/push_notification.sh
